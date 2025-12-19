@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống thử đồ AR - Tự động khớp cơ thể</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: #fff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.6;
+        }
+        
+        .tech-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        
+        .camera-section {
+            flex: 1.2;
+            min-width: 500px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            border-radius: 15px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 20px;
+        }
+        
+        #video, #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+        
+        #canvas {
+            z-index: 2;
+        }
+        
+        .camera-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+            color: #333;
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .clothing-section {
+            flex: 0.8;
+            min-width: 350px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-height: 750px;
+            overflow-y: auto;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #ff9a9e;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .clothing-categories {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .category-btn {
+            padding: 10px 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .category-btn.active {
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+            color: #333;
+        }
+        
+        .category-btn:hover {
+            background: rgba(255, 154, 158, 0.5);
+        }
+        
+        .clothing-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            max-height: 450px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        .clothing-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 2px solid transparent;
+        }
+        
+        .clothing-item:hover {
+            transform: translateY(-5px) scale(1.03);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            border-color: rgba(255, 154, 158, 0.5);
+        }
+        
+        .clothing-item.active {
+            border: 3px solid #ff9a9e;
+            box-shadow: 0 0 20px rgba(255, 154, 158, 0.5);
+        }
+        
+        .clothing-img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background: linear-gradient(45deg, #6a89cc, #b8e994);
+        }
+        
+        .clothing-name {
+            padding: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .clothing-type {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+        
+        .ar-controls {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 25px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #fad0c4;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ff9a9e;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 154, 158, 0.7);
+        }
+        
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-panel {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .status-label {
+            color: #a5b1c2;
+        }
+        
+        .status-value {
+            font-weight: 600;
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        }
+        
+        .instructions h3 {
+            margin-bottom: 20px;
+            color: #ff9a9e;
+            font-size: 1.5rem;
+        }
+        
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .step {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .step:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .step-number {
+            background: linear-gradient(to right, #ff9a9e, #fad0c4);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .step-content h4 {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .step-content p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 30px 0;
+            margin-top: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            opacity: 0.7;
+        }
+        
+        .notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #ff9a9e;
+            color: #333;
+            padding: 15px 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.5s ease;
+            z-index: 1000;
+            max-width: 350px;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            border-radius: 15px;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255, 255, 255, 0.1);
+            border-top: 5px solid #ff9a9e;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            text-align: center;
+            font-size: 1.1rem;
+        }
+        
+        .pose-points {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            z-index: 5;
+            max-width: 200px;
+        }
+        
+        @media (max-width: 1100px) {
+            .main-content {
+                flex-direction: column;
+            }
+            
+            .camera-section, .clothing-section {
+                min-width: 100%;
+            }
+            
+            .camera-container {
+                height: 450px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.2rem;
+            }
+            
+            .camera-container {
+                height: 400px;
+            }
+            
+            .clothing-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+        }
+        
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider-switch {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        
+        .slider-switch:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider-switch {
+            background-color: #ff9a9e;
+        }
+        
+        input:checked + .slider-switch:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-robot"></i> HỆ THỐNG THỬ ĐỒ AR THÔNG MINH</h1>
+            <p class="subtitle">Sử dụng AI để tự động phát hiện cơ thể và khớp trang phục hoàn hảo với từng đường cong cơ thể bạn. Công nghệ PoseNet giúp định vị chính xác các điểm cơ thể để đặt trang phục đúng vị trí.</p>
+            
+            <div class="tech-badges">
+                <div class="badge"><i class="fas fa-brain"></i> TensorFlow.js PoseNet</div>
+                <div class="badge"><i class="fas fa-video"></i> Real-time AR</div>
+                <div class="badge"><i class="fas fa-tshirt"></i> Auto-fitting</div>
+                <div class="badge"><i class="fas fa-magic"></i> AI-Powered</div>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <section class="camera-section">
+                <h2 class="section-title"><i class="fas fa-user-circle"></i> Camera & Phát hiện cơ thể</h2>
+                
+                <div class="camera-container">
+                    <video id="video" autoplay muted playsinline></video>
+                    <canvas id="canvas"></canvas>
+                    
+                    <div id="loadingOverlay" class="loading-overlay">
+                        <div class="spinner"></div>
+                        <div class="loading-text">
+                            <p>Đang tải mô hình AI PoseNet...</p>
+                            <p style="font-size: 0.9rem; margin-top: 10px;">Vui lòng chờ trong giây lát</p>
+                        </div>
+                    </div>
+                    
+                    <div class="pose-points" id="posePoints" style="display: none;">
+                        <div><strong>Phát hiện cơ thể:</strong> <span id="poseStatus">Đang tải...</span></div>
+                        <div>Điểm cơ thể: <span id="pointsCount">0</span></div>
+                    </div>
+                </div>
+                
+                <div class="camera-controls">
+                    <button id="startBtn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Bật Camera & AI
+                    </button>
+                    <button id="captureBtn" class="btn btn-secondary" disabled>
+                        <i class="fas fa-camera-retro"></i> Chụp Ảnh
+                    </button>
+                    <button id="toggleSkeletonBtn" class="btn btn-secondary">
+                        <i class="fas fa-project-diagram"></i> Hiện/Xương
+                    </button>
+                    <button id="toggleClothingBtn" class="btn btn-secondary">
+                        <i class="fas fa-tshirt"></i> Hiện/Trang phục
+                    </button>
+                </div>
+                
+                <div class="status-panel">
+                    <div class="status-item">
+                        <span class="status-label">Trạng thái AI:</span>
+                        <span class="status-value" id="aiStatus">Chưa khởi động</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">FPS:</span>
+                        <span class="status-value" id="fpsCounter">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Độ chính xác:</span>
+                        <span class="status-value" id="accuracyValue">0%</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Trang phục đang thử:</span>
+                        <span class="status-value" id="currentClothing">Chưa chọn</span>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="clothing-section">
+                <h2 class="section-title"><i class="fas fa-tshirt"></i> Tủ đồ thông minh</h2>
+                
+                <div class="clothing-categories">
+                    <button class="category-btn active" data-category="all">Tất cả</button>
+                    <button class="category-btn" data-category="tops">Áo trên</button>
+                    <button class="category-btn" data-category="bottoms">Áo dưới</button>
+                    <button class="category-btn" data-category="fullbody">Nguyên bộ</button>
+                    <button class="category-btn" data-category="accessories">Phụ kiện</button>
+                </div>
+                
+                <div class="clothing-grid" id="clothingGrid">
+                    <!-- Clothing items will be loaded here by JavaScript -->
+                </div>
+                
+                <div class="ar-controls">
+                    <h3 style="margin-bottom: 15px; color: #ff9a9e;"><i class="fas fa-sliders-h"></i> Điều chỉnh trang phục</h3>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Kích thước trang phục</label>
+                        <div class="slider-container">
+                            <input type="range" min="70" max="150" value="100" class="slider" id="sizeSlider">
+                            <span class="slider-value" id="sizeValue">100%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label class="control-label">Độ trong suốt</label>
+                        <div class="slider-container">
+                            <input type="range" min="30" max="100" value="80" class="slider" id="opacitySlider">
+                            <span class="slider-value" id="opacityValue">80%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-switch">
+                        <span class="control-label">Tự động khớp cơ thể</span>
+                        <label class="switch">
+                            <input type="checkbox" id="autoFitToggle" checked>
+                            <span class="slider-switch"></span>
+                        </label>
+                    </div>
+                    
+                    <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
+                        <button id="resetBtn" class="btn btn-secondary">
+                            <i class="fas fa-redo"></i> Đặt lại
+                        </button>
+                        <button id="saveBtn" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Lưu Ảnh
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <section class="instructions">
+            <h3><i class="fas fa-graduation-cap"></i> Cách thức hoạt động của hệ thống</h3>
+            <div class="steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <h4>Phát hiện cơ thể bằng AI</h4>
+                        <p>Hệ thống sử dụng PoseNet (TensorFlow.js) để nhận diện 17 điểm cơ thể chính như vai, khuỷu tay, hông, đầu gối.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <h4>Tự động khớp trang phục</h4>
+                        <p>Trang phục sẽ tự động căn chỉnh dựa trên vị trí các điểm cơ thể, đảm bảo vừa vặn với hình dáng thực tế.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <h4>Hiệu chỉnh thông minh</h4>
+                        <p>Bạn có thể điều chỉnh kích thước, độ trong suốt hoặc tắt chế độ tự động để điều chỉnh thủ công.</p>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">4</div>
+                    <div class="step-content">
+                        <h4>Lưu và chia sẻ</h4>
+                        <p>Chụp ảnh và lưu lại kết quả thử đồ để so sánh hoặc chia sẻ với bạn bè, người thân.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <footer>
+            <p>© 2023 Hệ thống thử đồ AR thông minh - Sử dụng TensorFlow.js PoseNet và WebGL</p>
+            <p style="margin-top: 10px; font-size: 0.9rem;">Hệ thống hoạt động tốt nhất trên Chrome/Edge với camera độ phân giải tối thiểu 720p</p>
+        </footer>
+    </div>
+    
+    <div id="notification" class="notification">
+        <span id="notificationText">Thông báo</span>
+    </div>
+
+    <!-- TensorFlow.js and PoseNet -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.11.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@2.0.0"></script>
+    
+    <script>
+        // DOM Elements
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const startBtn = document.getElementById('startBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const toggleSkeletonBtn = document.getElementById('toggleSkeletonBtn');
+        const toggleClothingBtn = document.getElementById('toggleClothingBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const sizeSlider = document.getElementById('sizeSlider');
+        const sizeValue = document.getElementById('sizeValue');
+        const opacitySlider = document.getElementById('opacitySlider');
+        const opacityValue = document.getElementById('opacityValue');
+        const autoFitToggle = document.getElementById('autoFitToggle');
+        const clothingGrid = document.getElementById('clothingGrid');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const aiStatus = document.getElementById('aiStatus');
+        const fpsCounter = document.getElementById('fpsCounter');
+        const accuracyValue = document.getElementById('accuracyValue');
+        const currentClothing = document.getElementById('currentClothing');
+        const posePoints = document.getElementById('posePoints');
+        const poseStatus = document.getElementById('poseStatus');
+        const pointsCount = document.getElementById('pointsCount');
+        const notification = document.getElementById('notification');
+        const notificationText = document.getElementById('notificationText');
+        
+        // State variables
+        let stream = null;
+        let detector = null;
+        let isSkeletonVisible = true;
+        let isClothingVisible = true;
+        let isAutoFit = true;
+        let selectedClothing = null;
+        let clothingScale = 1.0;
+        let clothingOpacity = 0.8;
+        let poses = [];
+        let animationId = null;
+        let lastTimestamp = 0;
+        let frameCount = 0;
+        let fps = 0;
+        
+        // PoseNet keypoint indices
+        const KEYPOINTS = {
+            NOSE: 0,
+            LEFT_EYE: 1,
+            RIGHT_EYE: 2,
+            LEFT_EAR: 3,
+            RIGHT_EAR: 4,
+            LEFT_SHOULDER: 5,
+            RIGHT_SHOULDER: 6,
+            LEFT_ELBOW: 7,
+            RIGHT_ELBOW: 8,
+            LEFT_WRIST: 9,
+            RIGHT_WRIST: 10,
+            LEFT_HIP: 11,
+            RIGHT_HIP: 12,
+            LEFT_KNEE: 13,
+            RIGHT_KNEE: 14,
+            LEFT_ANKLE: 15,
+            RIGHT_ANKLE: 16
+        };
+        
+        // Clothing database với thông tin vị trí khớp
+        // clothingItems - Cập nhật một số mục đầu tiên với hình ảnh thực
+        const clothingItems = [
+            {
+                id: 1,
+                name: "Áo thun cổ tròn",
+                category: "tops",
+                type: "t-shirt",
+                // Thay thế thuộc tính color bằng imageUrl
+                imageUrl: "img/1.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
+                // overlayColor không cần thiết nếu dùng ảnh, nhưng giữ lại để tương thích
+                overlayColor: "rgba(52, 152, 219, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_SHOULDER,
+                    bottom: KEYPOINTS.LEFT_HIP,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 1.8
+            },
+            {
+                id: 2,
+                name: "Áo sơ mi trắng",
+                category: "tops",
+                type: "shirt",
+                imageUrl: "img/2.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
+                overlayColor: "rgba(236, 240, 241, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_SHOULDER,
+                    bottom: KEYPOINTS.LEFT_HIP,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 1.9
+            },
+            {
+                id: 3,
+                name: "Áo hoodie đen",
+                category: "tops",
+                type: "hoodie",
+                imageUrl: "https://example.com/images/hoodie-black.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
+                overlayColor: "rgba(44, 62, 80, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.LEFT_HIP,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 2.2
+            },
+            // ... Cập nhật các mục còn lại theo cùng cách
+            { 
+                id: 4, 
+                name: "Quần jeans xanh", 
+                category: "bottoms", 
+                type: "pants",
+                color: "#1a5276",
+                overlayColor: "rgba(26, 82, 118, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_HIP,
+                    bottom: KEYPOINTS.LEFT_ANKLE,
+                    left: KEYPOINTS.LEFT_HIP,
+                    right: KEYPOINTS.RIGHT_HIP
+                },
+                sizeRatio: 2.5
+            },
+            { 
+                id: 5, 
+                name: "Quần short đen", 
+                category: "bottoms", 
+                type: "shorts",
+                color: "#17202a",
+                overlayColor: "rgba(23, 32, 42, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_HIP,
+                    bottom: KEYPOINTS.LEFT_KNEE,
+                    left: KEYPOINTS.LEFT_HIP,
+                    right: KEYPOINTS.RIGHT_HIP
+                },
+                sizeRatio: 2.0
+            },
+            { 
+                id: 6, 
+                name: "Đầm dự tiệc đỏ", 
+                category: "fullbody", 
+                type: "dress",
+                color: "#e74c3c",
+                overlayColor: "rgba(231, 76, 60, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_SHOULDER,
+                    bottom: KEYPOINTS.LEFT_ANKLE,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 3.0
+            },
+            { 
+                id: 7, 
+                name: "Áo khoác da", 
+                category: "tops", 
+                type: "jacket",
+                color: "#7d6608",
+                overlayColor: "rgba(125, 102, 8, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.LEFT_HIP,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 2.5
+            },
+            { 
+                id: 8, 
+                name: "Váy hồng dạo phố", 
+                category: "fullbody", 
+                type: "dress",
+                color: "#fd79a8",
+                overlayColor: "rgba(253, 121, 168, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.LEFT_SHOULDER,
+                    bottom: KEYPOINTS.LEFT_KNEE,
+                    left: KEYPOINTS.LEFT_SHOULDER,
+                    right: KEYPOINTS.RIGHT_SHOULDER
+                },
+                sizeRatio: 2.7
+            },
+            { 
+                id: 9, 
+                name: "Kính mát thời trang", 
+                category: "accessories", 
+                type: "glasses",
+                color: "#f1c40f",
+                overlayColor: "rgba(241, 196, 15, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.NOSE,
+                    left: KEYPOINTS.LEFT_EYE,
+                    right: KEYPOINTS.RIGHT_EYE
+                },
+                sizeRatio: 0.5
+            },
+            { 
+                id: 10, 
+                name: "Mũ lưỡi trai", 
+                category: "accessories", 
+                type: "hat",
+                color: "#8e44ad",
+                overlayColor: "rgba(142, 68, 173, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.NOSE,
+                    left: KEYPOINTS.LEFT_EAR,
+                    right: KEYPOINTS.RIGHT_EAR
+                },
+                sizeRatio: 0.8
+            }
+        ];
+
+        const clothingImages = {};
+
+        // Hàm tải trước tất cả hình ảnh trang phục
+        function preloadClothingImages() {
+            clothingItems.forEach(item => {
+                if (item.imageUrl) {
+                    const img = new Image();
+                    img.src = item.imageUrl;
+                    clothingImages[item.id] = img;
+                }
+            });
+        }
+        
+        // Gọi hàm tải ảnh khi khởi tạo ứng dụng
+        async function init() {
+            loadClothingItems('all');
+            setupEventListeners();
+            preloadClothingImages(); // <-- THÊM DÒNG NÀY
+            showNotification("Hệ thống thử đồ AR thông minh đã sẵn sàng. Bật camera để bắt đầu trải nghiệm!", false);
+        }
+        
+        // Load clothing items to the grid
+        function loadClothingItems(category) {
+            clothingGrid.innerHTML = '';
+            
+            const filteredItems = category === 'all' 
+                ? clothingItems 
+                : clothingItems.filter(item => item.category === category);
+            
+            filteredItems.forEach(item => {
+                const clothingItem = document.createElement('div');
+                clothingItem.className = 'clothing-item';
+                clothingItem.dataset.id = item.id;
+                clothingItem.title = `Nhấn để thử ${item.name}`;
+                
+                // Create clothing image/placeholder
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'clothing-img';
+                imgContainer.style.backgroundColor = item.color;
+                imgContainer.style.display = 'flex';
+                imgContainer.style.alignItems = 'center';
+                imgContainer.style.justifyContent = 'center';
+                imgContainer.style.color = '#fff';
+                imgContainer.style.fontSize = '32px';
+                imgContainer.innerHTML = `<i class="fas fa-${getClothingIcon(item.type)}"></i>`;
+                
+                const name = document.createElement('div');
+                name.className = 'clothing-name';
+                name.textContent = item.name;
+                
+                const type = document.createElement('div');
+                type.className = 'clothing-type';
+                type.textContent = getCategoryLabel(item.category);
+                
+                clothingItem.appendChild(imgContainer);
+                clothingItem.appendChild(name);
+                clothingItem.appendChild(type);
+                
+                clothingItem.addEventListener('click', () => selectClothing(item));
+                clothingGrid.appendChild(clothingItem);
+            });
+        }
+        
+        // Get clothing icon based on type
+        function getClothingIcon(type) {
+            const icons = {
+                't-shirt': 'tshirt',
+                'shirt': 'tshirt',
+                'hoodie': 'hood-cloak',
+                'pants': 'jeans',
+                'shorts': 'tshirt',
+                'dress': 'female',
+                'jacket': 'jacket',
+                'glasses': 'glasses',
+                'hat': 'hat-cowboy'
+            };
+            return icons[type] || 'tshirt';
+        }
+        
+        // Get category label
+        function getCategoryLabel(category) {
+            const labels = {
+                'tops': 'Áo',
+                'bottoms': 'Quần',
+                'fullbody': 'Cả bộ',
+                'accessories': 'Phụ kiện'
+            };
+            return labels[category] || category;
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Category buttons
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    loadClothingItems(this.dataset.category);
+                });
+            });
+            
+            // Start camera button
+            startBtn.addEventListener('click', startCameraAndAI);
+            
+            // Capture button
+            captureBtn.addEventListener('click', captureImage);
+            
+            // Toggle skeleton button
+            toggleSkeletonBtn.addEventListener('click', () => {
+                isSkeletonVisible = !isSkeletonVisible;
+                toggleSkeletonBtn.innerHTML = isSkeletonVisible 
+                    ? '<i class="fas fa-project-diagram"></i> Ẩn/Xương' 
+                    : '<i class="fas fa-project-diagram"></i> Hiện/Xương';
+            });
+            
+            // Toggle clothing button
+            toggleClothingBtn.addEventListener('click', () => {
+                isClothingVisible = !isClothingVisible;
+                toggleClothingBtn.innerHTML = isClothingVisible 
+                    ? '<i class="fas fa-tshirt"></i> Ẩn/Trang phục' 
+                    : '<i class="fas fa-tshirt"></i> Hiện/Trang phục';
+            });
+            
+            // Reset button
+            resetBtn.addEventListener('click', resetApp);
+            
+            // Save button
+            saveBtn.addEventListener('click', saveImage);
+            
+            // Size slider
+            sizeSlider.addEventListener('input', function() {
+                clothingScale = this.value / 100;
+                sizeValue.textContent = `${this.value}%`;
+            });
+            
+            // Opacity slider
+            opacitySlider.addEventListener('input', function() {
+                clothingOpacity = this.value / 100;
+                opacityValue.textContent = `${this.value}%`;
+            });
+            
+            // Auto-fit toggle
+            autoFitToggle.addEventListener('change', function() {
+                isAutoFit = this.checked;
+            });
+        }
+        
+        // Start camera and AI model
+        async function startCameraAndAI() {
+            try {
+                loadingOverlay.style.display = 'flex';
+                startBtn.disabled = true;
+                startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang khởi động...';
+                aiStatus.textContent = "Đang tải mô hình AI...";
+                
+                // 1. Access the camera
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 640 },
+                        height: { ideal: 480 }
+                    },
+                    audio: false
+                });
+                
+                video.srcObject = stream;
+                
+                // Wait for video to load
+                await new Promise(resolve => {
+                    video.onloadedmetadata = () => {
+                        resolve();
+                    };
+                });
+                
+                // 2. Load PoseNet model
+                const model = poseDetection.SupportedModels.MoveNet;
+                const detectorConfig = {
+                    modelType: poseDetection.movenet.modelType.SINGLEPOSE_THUNDER,
+                    enableSmoothing: true,
+                    minPoseScore: 0.2
+                };
+                
+                detector = await poseDetection.createDetector(model, detectorConfig);
+                
+                // 3. Set up canvas
+                canvas.width = video.videoWidth || 640;
+                canvas.height = video.videoHeight || 480;
+                
+                // 4. Hide loading and start detection
+                loadingOverlay.style.display = 'none';
+                startBtn.innerHTML = '<i class="fas fa-check"></i> Đã khởi động';
+                captureBtn.disabled = false;
+                aiStatus.textContent = "Đang hoạt động";
+                posePoints.style.display = 'block';
+                
+                // 5. Start pose detection loop
+                detectPose();
+                
+                showNotification("Camera và AI đã sẵn sàng! Hệ thống đang phát hiện cơ thể của bạn.", false);
+                
+            } catch (err) {
+                console.error("Error starting camera/AI:", err);
+                loadingOverlay.style.display = 'none';
+                startBtn.disabled = false;
+                startBtn.innerHTML = '<i class="fas fa-play"></i> Bật Camera & AI';
+                aiStatus.textContent = "Lỗi khởi động";
+                
+                // Fallback: Use simulated pose if AI fails
+                if (!detector) {
+                    showNotification("Không thể tải mô hình AI. Sử dụng chế độ mô phỏng.", true);
+                    startSimulatedPose();
+                } else {
+                    showNotification("Lỗi khi truy cập camera. Vui lòng kiểm tra quyền truy cập!", true);
+                }
+            }
+        }
+        
+        // Start simulated pose detection (fallback)
+        function startSimulatedPose() {
+            canvas.width = 640;
+            canvas.height = 480;
+            
+            // Create a simple simulated pose
+            poses = [{
+                keypoints: [
+                    {x: 320, y: 100, score: 0.9}, // NOSE
+                    {x: 300, y: 90, score: 0.9},  // LEFT_EYE
+                    {x: 340, y: 90, score: 0.9},  // RIGHT_EYE
+                    {x: 280, y: 100, score: 0.9}, // LEFT_EAR
+                    {x: 360, y: 100, score: 0.9}, // RIGHT_EAR
+                    {x: 280, y: 150, score: 0.9}, // LEFT_SHOULDER
+                    {x: 360, y: 150, score: 0.9}, // RIGHT_SHOULDER
+                    {x: 250, y: 200, score: 0.9}, // LEFT_ELBOW
+                    {x: 390, y: 200, score: 0.9}, // RIGHT_ELBOW
+                    {x: 220, y: 250, score: 0.9}, // LEFT_WRIST
+                    {x: 420, y: 250, score: 0.9}, // RIGHT_WRIST
+                    {x: 300, y: 220, score: 0.9}, // LEFT_HIP
+                    {x: 340, y: 220, score: 0.9}, // RIGHT_HIP
+                    {x: 290, y: 320, score: 0.9}, // LEFT_KNEE
+                    {x: 350, y: 320, score: 0.9}, // RIGHT_KNEE
+                    {x: 280, y: 400, score: 0.9}, // LEFT_ANKLE
+                    {x: 360, y: 400, score: 0.9}  // RIGHT_ANKLE
+                ],
+                score: 0.9
+            }];
+            
+            aiStatus.textContent = "Chế độ mô phỏng";
+            posePoints.style.display = 'block';
+            poseStatus.textContent = "Mô phỏng";
+            pointsCount.textContent = "17";
+            
+            // Start rendering
+            render();
+        }
+        
+        // Detect pose using AI
+        async function detectPose() {
+            if (!detector) return;
+            
+            try {
+                // Estimate poses
+                poses = await detector.estimatePoses(video, {
+                    maxPoses: 1,
+                    flipHorizontal: false
+                });
+                
+                // Update status
+                if (poses.length > 0) {
+                    const pose = poses[0];
+                    const validPoints = pose.keypoints.filter(kp => kp.score > 0.3).length;
+                    poseStatus.textContent = "Đã phát hiện";
+                    pointsCount.textContent = validPoints;
+                    accuracyValue.textContent = `${Math.round(pose.score * 100)}%`;
+                } else {
+                    poseStatus.textContent = "Không phát hiện";
+                    pointsCount.textContent = "0";
+                    accuracyValue.textContent = "0%";
+                }
+                
+                // Render the result
+                render();
+                
+                // Continue detection
+                animationId = requestAnimationFrame(detectPose);
+                
+                // Calculate FPS
+                updateFPS();
+                
+            } catch (err) {
+                console.error("Error detecting pose:", err);
+                // Continue anyway
+                animationId = requestAnimationFrame(detectPose);
+            }
+        }
+        
+        // Update FPS counter
+        function updateFPS() {
+            frameCount++;
+            const now = performance.now();
+            
+            if (now >= lastTimestamp + 1000) {
+                fps = Math.round((frameCount * 1000) / (now - lastTimestamp));
+                fpsCounter.textContent = fps;
+                frameCount = 0;
+                lastTimestamp = now;
+            }
+        }
+        
+        // Render everything
+        function render() {
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw video frame
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Draw skeleton if visible and pose detected
+            if (isSkeletonVisible && poses.length > 0 && poses[0].keypoints) {
+                drawSkeleton(ctx, poses[0].keypoints);
+            }
+            
+            // Draw clothing if visible and selected
+            if (isClothingVisible && selectedClothing && poses.length > 0 && poses[0].keypoints) {
+                drawClothing(ctx, poses[0].keypoints);
+            }
+        }
+        
+        // Draw skeleton
+        function drawSkeleton(ctx, keypoints) {
+            const connections = [
+                [KEYPOINTS.LEFT_SHOULDER, KEYPOINTS.RIGHT_SHOULDER],
+                [KEYPOINTS.LEFT_SHOULDER, KEYPOINTS.LEFT_ELBOW],
+                [KEYPOINTS.LEFT_ELBOW, KEYPOINTS.LEFT_WRIST],
+                [KEYPOINTS.RIGHT_SHOULDER, KEYPOINTS.RIGHT_ELBOW],
+                [KEYPOINTS.RIGHT_ELBOW, KEYPOINTS.RIGHT_WRIST],
+                [KEYPOINTS.LEFT_SHOULDER, KEYPOINTS.LEFT_HIP],
+                [KEYPOINTS.RIGHT_SHOULDER, KEYPOINTS.RIGHT_HIP],
+                [KEYPOINTS.LEFT_HIP, KEYPOINTS.RIGHT_HIP],
+                [KEYPOINTS.LEFT_HIP, KEYPOINTS.LEFT_KNEE],
+                [KEYPOINTS.LEFT_KNEE, KEYPOINTS.LEFT_ANKLE],
+                [KEYPOINTS.RIGHT_HIP, KEYPOINTS.RIGHT_KNEE],
+                [KEYPOINTS.RIGHT_KNEE, KEYPOINTS.RIGHT_ANKLE]
+            ];
+            
+            // Draw connections (bones)
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            
+            connections.forEach(connection => {
+                const [startIdx, endIdx] = connection;
+                const start = keypoints[startIdx];
+                const end = keypoints[endIdx];
+                
+                if (start.score > 0.3 && end.score > 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(start.x, start.y);
+                    ctx.lineTo(end.x, end.y);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw keypoints (joints)
+            keypoints.forEach(keypoint => {
+                if (keypoint.score > 0.3) {
+                    ctx.fillStyle = '#ff0000';
+                    ctx.beginPath();
+                    ctx.arc(keypoint.x, keypoint.y, 5, 0, 2 * Math.PI);
+                    ctx.fill();
+                    
+                    // Draw a white border
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+            });
+        }
+        
+        // Draw clothing based on pose
+        // CẬP NHẬT Hàm vẽ trang phục chính
+        function drawClothing(ctx, keypoints) {
+            if (!selectedClothing || !isClothingVisible) return;
+
+            const clothing = selectedClothing;
+            const kp = clothing.keypoints;
+
+            // Kiểm tra keypoints có đủ độ tin cậy không
+            const topKp = keypoints[kp.top];
+            const bottomKp = keypoints[kp.bottom];
+            const leftKp = keypoints[kp.left];
+            const rightKp = keypoints[kp.right];
+
+            if (!topKp || !bottomKp || !leftKp || !rightKp ||
+                topKp.score < 0.3 || bottomKp.score < 0.3 ||
+                leftKp.score < 0.3 || rightKp.score < 0.3) {
+                return;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = clothingOpacity;
+
+            // Tính toán vị trí và kích thước dựa trên keypoints cơ thể
+            let width, height, x, y;
+
+            if (isAutoFit) {
+                // Chế độ tự động khớp: tính toán dựa trên điểm cơ thể
+                width = Math.abs(rightKp.x - leftKp.x) * clothing.sizeRatio * clothingScale;
+                height = Math.abs(bottomKp.y - topKp.y) * clothing.sizeRatio * clothingScale;
+                x = (leftKp.x + rightKp.x) / 2 - width / 2;
+                y = (topKp.y + bottomKp.y) / 2 - height / 2;
+            } else {
+                // Chế độ thủ công: vị trí cố định
+                width = 200 * clothingScale;
+                height = 300 * clothingScale;
+                x = canvas.width / 2 - width / 2;
+                y = canvas.height / 2 - height / 2;
+            }
+
+            // VẼ HÌNH ẢNH THAY VÌ HÌNH DẠNG CSS
+            const img = clothingImages[clothing.id];
+
+            if (img && img.complete) {
+                // Áp dụng hiệu ứng độ trong suốt từ slider
+                ctx.globalAlpha = clothingOpacity;
+                // Vẽ hình ảnh đã được căn chỉnh
+                ctx.drawImage(img, x, y, width, height);
+            } else {
+                // Fallback: Vẽ hình dạng màu cũ nếu ảnh chưa tải xong
+                console.warn(`Hình ảnh cho ${clothing.name} chưa sẵn sàng, sử dụng fallback.`);
+                ctx.fillStyle = clothing.overlayColor;
+                ctx.fillRect(x, y, width, height);
+            }
+
+            ctx.restore();
+        }
+        
+        // Draw top clothing
+        function drawTopClothing(ctx, x, y, width, height, clothing) {
+            // Main body
+            ctx.fillStyle = clothing.overlayColor;
+            ctx.fillRect(x, y, width, height);
+            
+            // Neck opening
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(x + width/2, y + height/8, width/6, height/12, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Sleeves
+            ctx.fillStyle = clothing.overlayColor;
+            ctx.fillRect(x - width/4, y + height/4, width/4, height/3);
+            ctx.fillRect(x + width, y + height/4, width/4, height/3);
+            
+            // Details
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            
+            // Center line
+            ctx.beginPath();
+            ctx.moveTo(x + width/2, y + height/8);
+            ctx.lineTo(x + width/2, y + height);
+            ctx.stroke();
+            
+            // Pocket for hoodie
+            if (clothing.type === 'hoodie') {
+                ctx.beginPath();
+                ctx.arc(x + width/2, y + height/2, width/5, 0, Math.PI);
+                ctx.stroke();
+            }
+        }
+        
+        // Draw bottom clothing
+        function drawBottomClothing(ctx, x, y, width, height, clothing) {
+            // Main body
+            ctx.fillStyle = clothing.overlayColor;
+            
+            if (clothing.type === 'shorts') {
+                // Shorts
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + width, y);
+                ctx.lineTo(x + width * 0.9, y + height);
+                ctx.lineTo(x + width * 0.1, y + height);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Leg openings
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.beginPath();
+                ctx.ellipse(x + width * 0.25, y + height, width/8, height/10, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(x + width * 0.75, y + height, width/8, height/10, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Pants
+                ctx.fillRect(x, y, width, height);
+                
+                // Leg separation
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillRect(x + width/2 - 5, y, 10, height);
+            }
+        }
+        
+        // Draw dress
+        function drawDress(ctx, x, y, width, height, clothing) {
+            ctx.fillStyle = clothing.overlayColor;
+            
+            // Dress shape (A-line)
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + width, y);
+            ctx.lineTo(x + width * 0.8, y + height);
+            ctx.lineTo(x + width * 0.2, y + height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Neck opening
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.beginPath();
+            ctx.ellipse(x + width/2, y + height/10, width/6, height/15, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Waist line
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + width * 0.2, y + height/3);
+            ctx.lineTo(x + width * 0.8, y + height/3);
+            ctx.stroke();
+        }
+        
+        // Draw glasses
+        function drawGlasses(ctx, x, y, width, height, clothing) {
+            ctx.fillStyle = clothing.overlayColor;
+            
+            // Left lens
+            ctx.beginPath();
+            ctx.ellipse(x + width/4, y, width/4, height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Right lens
+            ctx.beginPath();
+            ctx.ellipse(x + width * 3/4, y, width/4, height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bridge
+            ctx.fillRect(x + width/2 - width/20, y - height/4, width/10, height/4);
+            
+            // Arms
+            ctx.fillRect(x, y, width/8, height/10);
+            ctx.fillRect(x + width * 7/8, y, width/8, height/10);
+        }
+        
+        // Draw hat
+        function drawHat(ctx, x, y, width, height, clothing) {
+            ctx.fillStyle = clothing.overlayColor;
+            
+            // Brim
+            ctx.beginPath();
+            ctx.ellipse(x + width/2, y + height/2, width/2, height/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Crown
+            ctx.beginPath();
+            ctx.ellipse(x + width/2, y, width/3, height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Draw generic clothing
+        function drawGenericClothing(ctx, x, y, width, height, clothing) {
+            ctx.fillStyle = clothing.overlayColor;
+            ctx.fillRect(x, y, width, height);
+            
+            // Add some details
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x + 10, y + 10, width - 20, height - 20);
+        }
+        
+        // Select clothing item
+        function selectClothing(item) {
+            // Remove active class from all items
+            document.querySelectorAll('.clothing-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Add active class to selected item
+            document.querySelector(`.clothing-item[data-id="${item.id}"]`).classList.add('active');
+            
+            // Set selected clothing
+            selectedClothing = item;
+            currentClothing.textContent = item.name;
+            
+            // Reset adjustments
+            sizeSlider.value = 100;
+            sizeValue.textContent = '100%';
+            clothingScale = 1.0;
+            
+            showNotification(`Đã chọn: ${item.name}. Trang phục sẽ tự động khớp với cơ thể bạn!`, false);
+        }
+        
+        // Capture image
+        function captureImage() {
+            if (!stream) {
+                showNotification("Vui lòng bật camera trước khi chụp ảnh!", true);
+                return;
+            }
+            
+            // Create a temporary canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw current canvas content
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // Add watermark and info
+            tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            tempCtx.fillRect(10, tempCanvas.height - 100, tempCanvas.width - 20, 90);
+            
+            tempCtx.fillStyle = '#ff9a9e';
+            tempCtx.font = 'bold 18px Arial';
+            tempCtx.textAlign = 'center';
+            tempCtx.fillText('Hệ thống thử đồ AR thông minh', tempCanvas.width / 2, tempCanvas.height - 70);
+            
+            tempCtx.fillStyle = '#ffffff';
+            tempCtx.font = '14px Arial';
+            if (selectedClothing) {
+                tempCtx.fillText(`Trang phục: ${selectedClothing.name}`, tempCanvas.width / 2, tempCanvas.height - 45);
+            }
+            tempCtx.fillText(new Date().toLocaleDateString('vi-VN') + ' - ' + new Date().toLocaleTimeString('vi-VN'), tempCanvas.width / 2, tempCanvas.height - 20);
+            
+            // Convert to data URL and show in new tab
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const newWindow = window.open();
+            newWindow.document.write(`<img src="${dataUrl}" alt="Ảnh thử đồ AR" style="max-width:100%;">`);
+            
+            showNotification("Đã chụp ảnh thành công! Ảnh đang được mở trong tab mới.", false);
+        }
+        
+        // Reset app
+        function resetApp() {
+            // Reset selected clothing
+            selectedClothing = null;
+            document.querySelectorAll('.clothing-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            
+            // Reset adjustments
+            sizeSlider.value = 100;
+            sizeValue.textContent = '100%';
+            clothingScale = 1.0;
+            
+            opacitySlider.value = 80;
+            opacityValue.textContent = '80%';
+            clothingOpacity = 0.8;
+            
+            autoFitToggle.checked = true;
+            isAutoFit = true;
+            
+            currentClothing.textContent = "Chưa chọn";
+            
+            showNotification("Đã đặt lại hệ thống. Bạn có thể chọn trang phục mới.", false);
+        }
+        
+        // Save image
+        function saveImage() {
+            if (!stream) {
+                showNotification("Vui lòng bật camera trước khi lưu ảnh!", true);
+                return;
+            }
+            
+            // Create a temporary canvas
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Draw current canvas content
+            tempCtx.drawImage(canvas, 0, 0);
+            
+            // Add watermark
+            tempCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+            tempCtx.fillRect(10, tempCanvas.height - 50, tempCanvas.width - 20, 40);
+            tempCtx.fillStyle = '#ff9a9e';
+            tempCtx.font = '16px Arial';
+            tempCtx.textAlign = 'center';
+            tempCtx.fillText('Hệ thống thử đồ AR - ' + new Date().toLocaleDateString('vi-VN'), tempCanvas.width / 2, tempCanvas.height - 25);
+            
+            // Create download link
+            const dataUrl = tempCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = `thu-do-ar-${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+            
+            showNotification("Đã lưu ảnh thành công!", false);
+        }
+        
+        // Show notification
+        function showNotification(message, isError = false) {
+            notificationText.textContent = message;
+            notification.style.background = isError ? '#e74c3c' : '#ff9a9e';
+            notification.style.color = isError ? '#fff' : '#333';
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+        
+        // Initialize the app when page loads
+        window.addEventListener('DOMContentLoaded', init);
+        
+        // Clean up when page closes
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        });
+    </script>
+</body>
+</html>
