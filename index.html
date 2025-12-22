@@ -233,6 +233,20 @@
             height: 120px;
             object-fit: cover;
             background: linear-gradient(45deg, #6a89cc, #b8e994);
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .clothing-img img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+            border-radius: 15px 15px 0 0;
+        }
+        
+        .clothing-item:hover .clothing-img img {
+            transform: scale(1.05);
         }
         
         .clothing-name {
@@ -459,6 +473,48 @@
             max-width: 200px;
         }
         
+        .selected-list {
+            margin-top: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 15px;
+        }
+        
+        .selected-list h4 {
+            color: #ff9a9e;
+            margin-bottom: 10px;
+            font-size: 1rem;
+        }
+        
+        .selected-items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            max-height: 80px;
+            overflow-y: auto;
+        }
+        
+        .selected-badge {
+            background: rgba(255, 154, 158, 0.3);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .selected-badge .remove-btn {
+            background: none;
+            border: none;
+            color: #ff9a9e;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0;
+            margin-left: 3px;
+        }
+        
         @media (max-width: 1100px) {
             .main-content {
                 flex-direction: column;
@@ -549,7 +605,7 @@
             <div class="tech-badges">
                 <div class="badge"><i class="fas fa-brain"></i> TensorFlow.js PoseNet</div>
                 <div class="badge"><i class="fas fa-video"></i> Real-time AR</div>
-                <div class="badge"><i class="fas fa-tshirt"></i> Auto-fitting</div>
+                <div class="badge"><i class="fas fa-tshirt"></i> Multi-item Fitting</div>
                 <div class="badge"><i class="fas fa-magic"></i> AI-Powered</div>
             </div>
         </header>
@@ -606,7 +662,14 @@
                     </div>
                     <div class="status-item">
                         <span class="status-label">Trang phục đang thử:</span>
-                        <span class="status-value" id="currentClothing">Chưa chọn</span>
+                        <span class="status-value" id="currentClothing">0 mục</span>
+                    </div>
+                </div>
+
+                <div class="selected-list">
+                    <h4><i class="fas fa-list"></i> Danh sách đã chọn:</h4>
+                    <div class="selected-items" id="selectedItems">
+                        <!-- Selected items will appear here -->
                     </div>
                 </div>
             </section>
@@ -616,9 +679,8 @@
                 
                 <div class="clothing-categories">
                     <button class="category-btn active" data-category="all">Tất cả</button>
-                    <button class="category-btn" data-category="tops">Áo trên</button>
-                    <button class="category-btn" data-category="bottoms">Áo dưới</button>
-                    <button class="category-btn" data-category="fullbody">Nguyên bộ</button>
+                    <button class="category-btn" data-category="tops">Áo</button>
+                    <button class="category-btn" data-category="bottoms">Quần</button>
                     <button class="category-btn" data-category="accessories">Phụ kiện</button>
                 </div>
                 
@@ -654,8 +716,8 @@
                     </div>
                     
                     <div style="margin-top: 20px; display: flex; gap: 10px; justify-content: center;">
-                        <button id="resetBtn" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> Đặt lại
+                        <button id="clearAllBtn" class="btn btn-secondary">
+                            <i class="fas fa-trash"></i> Xóa tất cả
                         </button>
                         <button id="saveBtn" class="btn btn-primary">
                             <i class="fas fa-save"></i> Lưu Ảnh
@@ -678,8 +740,8 @@
                 <div class="step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <h4>Tự động khớp trang phục</h4>
-                        <p>Trang phục sẽ tự động căn chỉnh dựa trên vị trí các điểm cơ thể, đảm bảo vừa vặn với hình dáng thực tế.</p>
+                        <h4>Thử nhiều trang phục cùng lúc</h4>
+                        <p>Chọn nhiều trang phục (áo, quần, kính, mũ) để thử cùng một lúc. Tất cả sẽ tự động khớp với cơ thể bạn.</p>
                     </div>
                 </div>
                 <div class="step">
@@ -721,7 +783,7 @@
         const captureBtn = document.getElementById('captureBtn');
         const toggleSkeletonBtn = document.getElementById('toggleSkeletonBtn');
         const toggleClothingBtn = document.getElementById('toggleClothingBtn');
-        const resetBtn = document.getElementById('resetBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
         const saveBtn = document.getElementById('saveBtn');
         const sizeSlider = document.getElementById('sizeSlider');
         const sizeValue = document.getElementById('sizeValue');
@@ -729,6 +791,7 @@
         const opacityValue = document.getElementById('opacityValue');
         const autoFitToggle = document.getElementById('autoFitToggle');
         const clothingGrid = document.getElementById('clothingGrid');
+        const selectedItems = document.getElementById('selectedItems');
         const loadingOverlay = document.getElementById('loadingOverlay');
         const aiStatus = document.getElementById('aiStatus');
         const fpsCounter = document.getElementById('fpsCounter');
@@ -746,7 +809,7 @@
         let isSkeletonVisible = true;
         let isClothingVisible = true;
         let isAutoFit = true;
-        let selectedClothing = null;
+        let selectedClothings = []; // Mảng chứa nhiều trang phục
         let clothingScale = 1.0;
         let clothingOpacity = 0.8;
         let poses = [];
@@ -777,32 +840,14 @@
         };
         
         // Clothing database với thông tin vị trí khớp
-        // clothingItems - Cập nhật một số mục đầu tiên với hình ảnh thực
         const clothingItems = [
             {
                 id: 1,
-                name: "Áo thun cổ tròn",
+                name: "Áo thun đen",
                 category: "tops",
                 type: "t-shirt",
-                // Thay thế thuộc tính color bằng imageUrl
-                imageUrl: "img/1.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
-                // overlayColor không cần thiết nếu dùng ảnh, nhưng giữ lại để tương thích
+                imageUrl: "img/aothun.png",
                 overlayColor: "rgba(52, 152, 219, 0.7)",
-                keypoints: {
-                    top: KEYPOINTS.LEFT_SHOULDER,
-                    bottom: KEYPOINTS.LEFT_HIP,
-                    left: KEYPOINTS.LEFT_SHOULDER,
-                    right: KEYPOINTS.RIGHT_SHOULDER
-                },
-                sizeRatio: 1.8
-            },
-            {
-                id: 2,
-                name: "Áo sơ mi trắng",
-                category: "tops",
-                type: "shirt",
-                imageUrl: "img/2.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
-                overlayColor: "rgba(236, 240, 241, 0.7)",
                 keypoints: {
                     top: KEYPOINTS.LEFT_SHOULDER,
                     bottom: KEYPOINTS.LEFT_HIP,
@@ -812,27 +857,26 @@
                 sizeRatio: 1.9
             },
             {
-                id: 3,
-                name: "Áo hoodie đen",
+                id: 2,
+                name: "Áo sơ mi trắng",
                 category: "tops",
-                type: "hoodie",
-                imageUrl: "https://example.com/images/hoodie-black.png", // ĐƯỜNG DẪN HÌNH ẢNH CỦA BẠN
-                overlayColor: "rgba(44, 62, 80, 0.7)",
+                type: "shirt",
+                imageUrl: "img/2.png",
+                overlayColor: "rgba(236, 240, 241, 0.7)",
                 keypoints: {
-                    top: KEYPOINTS.NOSE,
+                    top: KEYPOINTS.LEFT_SHOULDER,
                     bottom: KEYPOINTS.LEFT_HIP,
                     left: KEYPOINTS.LEFT_SHOULDER,
                     right: KEYPOINTS.RIGHT_SHOULDER
                 },
-                sizeRatio: 2.2
+                sizeRatio: 1.9
             },
-            // ... Cập nhật các mục còn lại theo cùng cách
             { 
-                id: 4, 
+                id: 3, 
                 name: "Quần jeans xanh", 
                 category: "bottoms", 
                 type: "pants",
-                color: "#1a5276",
+                imageUrl: "img/quan1.png",
                 overlayColor: "rgba(26, 82, 118, 0.7)",
                 keypoints: {
                     top: KEYPOINTS.LEFT_HIP,
@@ -843,94 +887,63 @@
                 sizeRatio: 2.5
             },
             { 
-                id: 5, 
-                name: "Quần short đen", 
+                id: 4, 
+                name: "Quần tây đen", 
                 category: "bottoms", 
-                type: "shorts",
-                color: "#17202a",
+                imageUrl: "img/quan2.png",
                 overlayColor: "rgba(23, 32, 42, 0.7)",
                 keypoints: {
                     top: KEYPOINTS.LEFT_HIP,
-                    bottom: KEYPOINTS.LEFT_KNEE,
+                    bottom: KEYPOINTS.LEFT_ANKLE,
                     left: KEYPOINTS.LEFT_HIP,
                     right: KEYPOINTS.RIGHT_HIP
-                },
-                sizeRatio: 2.0
-            },
-            { 
-                id: 6, 
-                name: "Đầm dự tiệc đỏ", 
-                category: "fullbody", 
-                type: "dress",
-                color: "#e74c3c",
-                overlayColor: "rgba(231, 76, 60, 0.7)",
-                keypoints: {
-                    top: KEYPOINTS.LEFT_SHOULDER,
-                    bottom: KEYPOINTS.LEFT_ANKLE,
-                    left: KEYPOINTS.LEFT_SHOULDER,
-                    right: KEYPOINTS.RIGHT_SHOULDER
-                },
-                sizeRatio: 3.0
-            },
-            { 
-                id: 7, 
-                name: "Áo khoác da", 
-                category: "tops", 
-                type: "jacket",
-                color: "#7d6608",
-                overlayColor: "rgba(125, 102, 8, 0.7)",
-                keypoints: {
-                    top: KEYPOINTS.NOSE,
-                    bottom: KEYPOINTS.LEFT_HIP,
-                    left: KEYPOINTS.LEFT_SHOULDER,
-                    right: KEYPOINTS.RIGHT_SHOULDER
                 },
                 sizeRatio: 2.5
             },
             { 
-                id: 8, 
-                name: "Váy hồng dạo phố", 
-                category: "fullbody", 
-                type: "dress",
-                color: "#fd79a8",
-                overlayColor: "rgba(253, 121, 168, 0.7)",
+                id: 5, 
+                name: "Kính mát màu đen", 
+                category: "accessories", 
+                type: "glasses",
+                imageUrl: "img/kinh.png",
+                overlayColor: "rgba(241, 196, 15, 0.7)",
                 keypoints: {
-                    top: KEYPOINTS.LEFT_SHOULDER,
-                    bottom: KEYPOINTS.LEFT_KNEE,
-                    left: KEYPOINTS.LEFT_SHOULDER,
-                    right: KEYPOINTS.RIGHT_SHOULDER
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.LEFT_EAR,
+                    left: KEYPOINTS.LEFT_EAR,
+                    right: KEYPOINTS.RIGHT_EAR
                 },
-                sizeRatio: 2.7
+                sizeRatio: 0.5
             },
             { 
-                id: 9, 
+                id: 6, 
                 name: "Kính mát thời trang", 
                 category: "accessories", 
                 type: "glasses",
-                color: "#f1c40f",
+                imageUrl: "img/kinh2.png",
                 overlayColor: "rgba(241, 196, 15, 0.7)",
+                keypoints: {
+                    top: KEYPOINTS.NOSE,
+                    bottom: KEYPOINTS.LEFT_EAR,
+                    left: KEYPOINTS.LEFT_EAR,
+                    right: KEYPOINTS.RIGHT_EAR
+                },
+                sizeRatio: 0.5
+            },
+            {
+                id: 7, 
+                name: "Mũ lưỡi trai", 
+                category: "accessories", 
+                type: "hat",
+                imageUrl: "img/cap2.png",
+                overlayColor: "rgba(142, 68, 173, 0.7)",
                 keypoints: {
                     top: KEYPOINTS.NOSE,
                     bottom: KEYPOINTS.NOSE,
                     left: KEYPOINTS.LEFT_EYE,
                     right: KEYPOINTS.RIGHT_EYE
                 },
-                sizeRatio: 0.5
-            },
-            { 
-                id: 10, 
-                name: "Mũ lưỡi trai", 
-                category: "accessories", 
-                type: "hat",
-                color: "#8e44ad",
-                overlayColor: "rgba(142, 68, 173, 0.7)",
-                keypoints: {
-                    top: KEYPOINTS.NOSE,
-                    bottom: KEYPOINTS.NOSE,
-                    left: KEYPOINTS.LEFT_EAR,
-                    right: KEYPOINTS.RIGHT_EAR
-                },
-                sizeRatio: 0.8
+                sizeRatio: 1.5
             }
         ];
 
@@ -947,11 +960,12 @@
             });
         }
         
-        // Gọi hàm tải ảnh khi khởi tạo ứng dụng
+        // Khởi tạo ứng dụng
         async function init() {
             loadClothingItems('all');
             setupEventListeners();
-            preloadClothingImages(); // <-- THÊM DÒNG NÀY
+            preloadClothingImages();
+            updateSelectedList();
             showNotification("Hệ thống thử đồ AR thông minh đã sẵn sàng. Bật camera để bắt đầu trải nghiệm!", false);
         }
         
@@ -969,16 +983,38 @@
                 clothingItem.dataset.id = item.id;
                 clothingItem.title = `Nhấn để thử ${item.name}`;
                 
-                // Create clothing image/placeholder
+                // Tạo container cho hình ảnh
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'clothing-img';
-                imgContainer.style.backgroundColor = item.color;
-                imgContainer.style.display = 'flex';
-                imgContainer.style.alignItems = 'center';
-                imgContainer.style.justifyContent = 'center';
-                imgContainer.style.color = '#fff';
-                imgContainer.style.fontSize = '32px';
-                imgContainer.innerHTML = `<i class="fas fa-${getClothingIcon(item.type)}"></i>`;
+                
+                // Nếu có imageUrl, tạo thẻ img thực tế
+                if (item.imageUrl) {
+                    const img = document.createElement('img');
+                    img.src = item.imageUrl;
+                    img.alt = item.name;
+                    img.loading = 'lazy';
+                    
+                    img.onerror = function() {
+                        this.style.display = 'none';
+                        imgContainer.style.background = `linear-gradient(45deg, ${getRandomColor()}, ${getRandomColor()})`;
+                        imgContainer.innerHTML = `<i class="fas fa-${getClothingIcon(item.type)}"></i>`;
+                        imgContainer.style.display = 'flex';
+                        imgContainer.style.alignItems = 'center';
+                        imgContainer.style.justifyContent = 'center';
+                        imgContainer.style.color = '#fff';
+                        imgContainer.style.fontSize = '32px';
+                    };
+                    
+                    imgContainer.appendChild(img);
+                } else {
+                    imgContainer.style.backgroundColor = item.color || '#6a89cc';
+                    imgContainer.style.display = 'flex';
+                    imgContainer.style.alignItems = 'center';
+                    imgContainer.style.justifyContent = 'center';
+                    imgContainer.style.color = '#fff';
+                    imgContainer.style.fontSize = '32px';
+                    imgContainer.innerHTML = `<i class="fas fa-${getClothingIcon(item.type)}"></i>`;
+                }
                 
                 const name = document.createElement('div');
                 name.className = 'clothing-name';
@@ -995,6 +1031,15 @@
                 clothingItem.addEventListener('click', () => selectClothing(item));
                 clothingGrid.appendChild(clothingItem);
             });
+            
+            // Cập nhật trạng thái active cho các item đã chọn
+            updateClothingItemsActiveState();
+        }
+        
+        // Hàm tạo màu ngẫu nhiên cho fallback
+        function getRandomColor() {
+            const colors = ['#6a89cc', '#b8e994', '#fad390', '#f8a5c2', '#78e08f', '#e55039', '#4a69bd', '#60a3bc'];
+            return colors[Math.floor(Math.random() * colors.length)];
         }
         
         // Get clothing icon based on type
@@ -1002,11 +1047,8 @@
             const icons = {
                 't-shirt': 'tshirt',
                 'shirt': 'tshirt',
-                'hoodie': 'hood-cloak',
                 'pants': 'jeans',
                 'shorts': 'tshirt',
-                'dress': 'female',
-                'jacket': 'jacket',
                 'glasses': 'glasses',
                 'hat': 'hat-cowboy'
             };
@@ -1018,7 +1060,6 @@
             const labels = {
                 'tops': 'Áo',
                 'bottoms': 'Quần',
-                'fullbody': 'Cả bộ',
                 'accessories': 'Phụ kiện'
             };
             return labels[category] || category;
@@ -1057,8 +1098,8 @@
                     : '<i class="fas fa-tshirt"></i> Hiện/Trang phục';
             });
             
-            // Reset button
-            resetBtn.addEventListener('click', resetApp);
+            // Clear all button
+            clearAllBtn.addEventListener('click', clearAllClothings);
             
             // Save button
             saveBtn.addEventListener('click', saveImage);
@@ -1079,6 +1120,102 @@
             autoFitToggle.addEventListener('change', function() {
                 isAutoFit = this.checked;
             });
+        }
+        
+        // Select clothing item - cho phép chọn nhiều
+        function selectClothing(item) {
+            const existingIndex = selectedClothings.findIndex(c => c.id === item.id);
+            
+            if (existingIndex >= 0) {
+                // Nếu đã chọn, bỏ chọn
+                selectedClothings.splice(existingIndex, 1);
+                showNotification(`Đã bỏ: ${item.name}`, false);
+            } else {
+                // Nếu chưa chọn, thêm vào
+                selectedClothings.push(item);
+                showNotification(`Đã thêm: ${item.name}`, false);
+            }
+            
+            // Cập nhật UI
+            updateClothingItemsActiveState();
+            updateSelectedList();
+            updateCurrentClothingDisplay();
+        }
+        
+        // Update active state của các clothing item
+        function updateClothingItemsActiveState() {
+            document.querySelectorAll('.clothing-item').forEach(el => {
+                const itemId = parseInt(el.dataset.id);
+                const isSelected = selectedClothings.some(c => c.id === itemId);
+                
+                if (isSelected) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            });
+        }
+        
+        // Update selected items list
+        function updateSelectedList() {
+            selectedItems.innerHTML = '';
+            
+            if (selectedClothings.length === 0) {
+                selectedItems.innerHTML = '<div style="color: #aaa; font-style: italic; font-size: 0.9rem;">Chưa có trang phục nào được chọn</div>';
+                return;
+            }
+            
+            selectedClothings.forEach((item, index) => {
+                const badge = document.createElement('div');
+                badge.className = 'selected-badge';
+                badge.innerHTML = `
+                    ${item.name}
+                    <button class="remove-btn" data-index="${index}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                selectedItems.appendChild(badge);
+            });
+            
+            // Thêm sự kiện cho nút xóa
+            document.querySelectorAll('.remove-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const index = parseInt(this.dataset.index);
+                    removeClothing(index);
+                });
+            });
+        }
+        
+        // Remove clothing from selected list
+        function removeClothing(index) {
+            if (index >= 0 && index < selectedClothings.length) {
+                const removedItem = selectedClothings[index];
+                selectedClothings.splice(index, 1);
+                showNotification(`Đã bỏ: ${removedItem.name}`, false);
+                
+                updateClothingItemsActiveState();
+                updateSelectedList();
+                updateCurrentClothingDisplay();
+            }
+        }
+        
+        // Clear all selected clothings
+        function clearAllClothings() {
+            if (selectedClothings.length > 0) {
+                selectedClothings = [];
+                updateClothingItemsActiveState();
+                updateSelectedList();
+                updateCurrentClothingDisplay();
+                showNotification("Đã xóa tất cả trang phục", false);
+            }
+        }
+        
+        // Update current clothing display
+        function updateCurrentClothingDisplay() {
+            const count = selectedClothings.length;
+            currentClothing.textContent = `${count} mục`;
         }
         
         // Start camera and AI model
@@ -1141,7 +1278,6 @@
                 startBtn.innerHTML = '<i class="fas fa-play"></i> Bật Camera & AI';
                 aiStatus.textContent = "Lỗi khởi động";
                 
-                // Fallback: Use simulated pose if AI fails
                 if (!detector) {
                     showNotification("Không thể tải mô hình AI. Sử dụng chế độ mô phỏng.", true);
                     startSimulatedPose();
@@ -1257,9 +1393,12 @@
                 drawSkeleton(ctx, poses[0].keypoints);
             }
             
-            // Draw clothing if visible and selected
-            if (isClothingVisible && selectedClothing && poses.length > 0 && poses[0].keypoints) {
-                drawClothing(ctx, poses[0].keypoints);
+            // Draw clothing if visible and has selected clothings
+            if (isClothingVisible && selectedClothings.length > 0 && poses.length > 0 && poses[0].keypoints) {
+                // Vẽ tất cả các trang phục đã chọn
+                selectedClothings.forEach(clothing => {
+                    drawClothing(ctx, poses[0].keypoints, clothing);
+                });
             }
         }
         
@@ -1315,14 +1454,152 @@
         }
         
         // Draw clothing based on pose
-        // CẬP NHẬT Hàm vẽ trang phục chính
-        function drawClothing(ctx, keypoints) {
-            if (!selectedClothing || !isClothingVisible) return;
+        function drawClothing(ctx, keypoints, clothing) {
+            if (!clothing || !isClothingVisible) return;
 
-            const clothing = selectedClothing;
             const kp = clothing.keypoints;
 
             // Kiểm tra keypoints có đủ độ tin cậy không
+            const topKp = keypoints[kp.top];
+            const bottomKp = keypoints[kp.bottom];
+            const leftKp = keypoints[kp.left];
+            const rightKp = keypoints[kp.right];
+
+            // Nếu không đủ điểm để vẽ, không vẽ gì cả
+            if (!topKp || !bottomKp || !leftKp || !rightKp) {
+                return;
+            }
+
+            ctx.save();
+            ctx.globalAlpha = clothingOpacity;
+
+            // Xử lý riêng cho từng loại trang phục
+            switch (clothing.type) {
+                case 'glasses':
+                    drawGlassesCustom(ctx, keypoints, clothing);
+                    break;
+                case 'hat':
+                    drawHatCustom(ctx, keypoints, clothing);
+                    break;
+                case 'pants':
+                    drawPantsCustom(ctx, keypoints, clothing);
+                    break;
+                default:
+                    // Các loại khác (áo)
+                    drawGenericClothingCustom(ctx, keypoints, clothing);
+            }
+
+            ctx.restore();
+        }
+
+        // Vẽ kính mắt
+        function drawGlassesCustom(ctx, keypoints, clothing) {
+            const leftEye = keypoints[KEYPOINTS.LEFT_EYE];
+            const rightEye = keypoints[KEYPOINTS.RIGHT_EYE];
+            const nose = keypoints[KEYPOINTS.NOSE];
+
+            if (!leftEye || !rightEye || !nose || 
+                leftEye.score < 0.3 || rightEye.score < 0.3 || nose.score < 0.3) {
+                return;
+            }
+
+            // Tính toán vị trí và kích thước kính
+            const eyeDistance = Math.abs(rightEye.x - leftEye.x);
+            const glassesWidth = eyeDistance * 2.5 * clothingScale;
+            const glassesHeight = glassesWidth * 0.4;
+            
+            // Vị trí kính (ngang mắt, trên mũi)
+            const centerX = (leftEye.x + rightEye.x) / 2;
+            const centerY = (leftEye.y + rightEye.y) / 2;
+            
+            const x = centerX - glassesWidth / 2;
+            const y = centerY - glassesHeight / 2;
+
+            const img = clothingImages[clothing.id];
+            if (img && img.complete) {
+                ctx.drawImage(img, x, y, glassesWidth, glassesHeight);
+            } else {
+                // Fallback
+                ctx.fillStyle = clothing.overlayColor;
+                ctx.fillRect(x, y, glassesWidth, glassesHeight);
+            }
+        }
+
+        // Vẽ mũ
+        function drawHatCustom(ctx, keypoints, clothing) {
+            const nose = keypoints[KEYPOINTS.NOSE];
+            const leftEye = keypoints[KEYPOINTS.LEFT_EYE];
+            const rightEye = keypoints[KEYPOINTS.RIGHT_EYE];
+
+            if (!nose || nose.score < 0.3 || !leftEye || !rightEye) {
+                return;
+            }
+
+            const headCenterX = nose.x;
+            const eyeDistance = Math.abs(rightEye.x - leftEye.x);
+            
+            const hatWidth = eyeDistance * 3.0 * clothingScale;
+            const hatHeight = hatWidth * 0.7;
+            
+            const headTopY = nose.y - 100;
+            let hatY = headTopY - hatHeight * 0.5;
+            
+            let hatX = headCenterX - hatWidth / 2;
+
+            const img = clothingImages[clothing.id];
+            if (img && img.complete) {
+                ctx.drawImage(img, hatX, hatY, hatWidth, hatHeight);
+            } else {
+                ctx.fillStyle = clothing.overlayColor;
+                ctx.beginPath();
+                ctx.ellipse(
+                    headCenterX, 
+                    headTopY, 
+                    hatWidth * 0.45,
+                    hatHeight * 0.6,
+                    0, 0, Math.PI * 2
+                );
+                ctx.fill();
+            }
+        }
+
+        // Vẽ quần
+        function drawPantsCustom(ctx, keypoints, clothing) {
+            const leftHip = keypoints[KEYPOINTS.LEFT_HIP];
+            const rightHip = keypoints[KEYPOINTS.RIGHT_HIP];
+            const leftAnkle = keypoints[KEYPOINTS.LEFT_ANKLE];
+            const rightAnkle = keypoints[KEYPOINTS.RIGHT_ANKLE];
+
+            if (!leftHip || !rightHip || leftHip.score < 0.3 || rightHip.score < 0.3) {
+                return;
+            }
+
+            // Tính toán vị trí và kích thước quần
+            const hipsCenterX = (leftHip.x + rightHip.x) / 2;
+            const hipsCenterY = (leftHip.y + rightHip.y) / 2;
+            
+            let pantsWidth = Math.abs(rightHip.x - leftHip.x) * 1.5 * clothingScale;
+            let pantsHeight = 200 * clothingScale;
+            
+            if (leftAnkle && rightAnkle) {
+                pantsHeight = Math.abs(((leftAnkle.y + rightAnkle.y) / 2) - hipsCenterY) * 0.9;
+            }
+            
+            const x = hipsCenterX - pantsWidth / 2;
+            const y = hipsCenterY;
+
+            const img = clothingImages[clothing.id];
+            if (img && img.complete) {
+                ctx.drawImage(img, x, y, pantsWidth, pantsHeight);
+            } else {
+                ctx.fillStyle = clothing.overlayColor;
+                ctx.fillRect(x, y, pantsWidth, pantsHeight);
+            }
+        }
+
+        // Vẽ áo và các trang phục khác
+        function drawGenericClothingCustom(ctx, keypoints, clothing) {
+            const kp = clothing.keypoints;
             const topKp = keypoints[kp.top];
             const bottomKp = keypoints[kp.bottom];
             const leftKp = keypoints[kp.left];
@@ -1334,208 +1611,27 @@
                 return;
             }
 
-            ctx.save();
-            ctx.globalAlpha = clothingOpacity;
-
-            // Tính toán vị trí và kích thước dựa trên keypoints cơ thể
             let width, height, x, y;
 
             if (isAutoFit) {
-                // Chế độ tự động khớp: tính toán dựa trên điểm cơ thể
                 width = Math.abs(rightKp.x - leftKp.x) * clothing.sizeRatio * clothingScale;
                 height = Math.abs(bottomKp.y - topKp.y) * clothing.sizeRatio * clothingScale;
                 x = (leftKp.x + rightKp.x) / 2 - width / 2;
                 y = (topKp.y + bottomKp.y) / 2 - height / 2;
             } else {
-                // Chế độ thủ công: vị trí cố định
                 width = 200 * clothingScale;
                 height = 300 * clothingScale;
                 x = canvas.width / 2 - width / 2;
                 y = canvas.height / 2 - height / 2;
             }
 
-            // VẼ HÌNH ẢNH THAY VÌ HÌNH DẠNG CSS
             const img = clothingImages[clothing.id];
-
             if (img && img.complete) {
-                // Áp dụng hiệu ứng độ trong suốt từ slider
-                ctx.globalAlpha = clothingOpacity;
-                // Vẽ hình ảnh đã được căn chỉnh
                 ctx.drawImage(img, x, y, width, height);
             } else {
-                // Fallback: Vẽ hình dạng màu cũ nếu ảnh chưa tải xong
-                console.warn(`Hình ảnh cho ${clothing.name} chưa sẵn sàng, sử dụng fallback.`);
                 ctx.fillStyle = clothing.overlayColor;
                 ctx.fillRect(x, y, width, height);
             }
-
-            ctx.restore();
-        }
-        
-        // Draw top clothing
-        function drawTopClothing(ctx, x, y, width, height, clothing) {
-            // Main body
-            ctx.fillStyle = clothing.overlayColor;
-            ctx.fillRect(x, y, width, height);
-            
-            // Neck opening
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(x + width/2, y + height/8, width/6, height/12, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Sleeves
-            ctx.fillStyle = clothing.overlayColor;
-            ctx.fillRect(x - width/4, y + height/4, width/4, height/3);
-            ctx.fillRect(x + width, y + height/4, width/4, height/3);
-            
-            // Details
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = 2;
-            
-            // Center line
-            ctx.beginPath();
-            ctx.moveTo(x + width/2, y + height/8);
-            ctx.lineTo(x + width/2, y + height);
-            ctx.stroke();
-            
-            // Pocket for hoodie
-            if (clothing.type === 'hoodie') {
-                ctx.beginPath();
-                ctx.arc(x + width/2, y + height/2, width/5, 0, Math.PI);
-                ctx.stroke();
-            }
-        }
-        
-        // Draw bottom clothing
-        function drawBottomClothing(ctx, x, y, width, height, clothing) {
-            // Main body
-            ctx.fillStyle = clothing.overlayColor;
-            
-            if (clothing.type === 'shorts') {
-                // Shorts
-                ctx.beginPath();
-                ctx.moveTo(x, y);
-                ctx.lineTo(x + width, y);
-                ctx.lineTo(x + width * 0.9, y + height);
-                ctx.lineTo(x + width * 0.1, y + height);
-                ctx.closePath();
-                ctx.fill();
-                
-                // Leg openings
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.beginPath();
-                ctx.ellipse(x + width * 0.25, y + height, width/8, height/10, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.ellipse(x + width * 0.75, y + height, width/8, height/10, 0, 0, Math.PI * 2);
-                ctx.fill();
-            } else {
-                // Pants
-                ctx.fillRect(x, y, width, height);
-                
-                // Leg separation
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-                ctx.fillRect(x + width/2 - 5, y, 10, height);
-            }
-        }
-        
-        // Draw dress
-        function drawDress(ctx, x, y, width, height, clothing) {
-            ctx.fillStyle = clothing.overlayColor;
-            
-            // Dress shape (A-line)
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-            ctx.lineTo(x + width, y);
-            ctx.lineTo(x + width * 0.8, y + height);
-            ctx.lineTo(x + width * 0.2, y + height);
-            ctx.closePath();
-            ctx.fill();
-            
-            // Neck opening
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            ctx.beginPath();
-            ctx.ellipse(x + width/2, y + height/10, width/6, height/15, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Waist line
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(x + width * 0.2, y + height/3);
-            ctx.lineTo(x + width * 0.8, y + height/3);
-            ctx.stroke();
-        }
-        
-        // Draw glasses
-        function drawGlasses(ctx, x, y, width, height, clothing) {
-            ctx.fillStyle = clothing.overlayColor;
-            
-            // Left lens
-            ctx.beginPath();
-            ctx.ellipse(x + width/4, y, width/4, height/2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Right lens
-            ctx.beginPath();
-            ctx.ellipse(x + width * 3/4, y, width/4, height/2, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Bridge
-            ctx.fillRect(x + width/2 - width/20, y - height/4, width/10, height/4);
-            
-            // Arms
-            ctx.fillRect(x, y, width/8, height/10);
-            ctx.fillRect(x + width * 7/8, y, width/8, height/10);
-        }
-        
-        // Draw hat
-        function drawHat(ctx, x, y, width, height, clothing) {
-            ctx.fillStyle = clothing.overlayColor;
-            
-            // Brim
-            ctx.beginPath();
-            ctx.ellipse(x + width/2, y + height/2, width/2, height/4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            
-            // Crown
-            ctx.beginPath();
-            ctx.ellipse(x + width/2, y, width/3, height/2, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-        
-        // Draw generic clothing
-        function drawGenericClothing(ctx, x, y, width, height, clothing) {
-            ctx.fillStyle = clothing.overlayColor;
-            ctx.fillRect(x, y, width, height);
-            
-            // Add some details
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.5)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(x + 10, y + 10, width - 20, height - 20);
-        }
-        
-        // Select clothing item
-        function selectClothing(item) {
-            // Remove active class from all items
-            document.querySelectorAll('.clothing-item').forEach(el => {
-                el.classList.remove('active');
-            });
-            
-            // Add active class to selected item
-            document.querySelector(`.clothing-item[data-id="${item.id}"]`).classList.add('active');
-            
-            // Set selected clothing
-            selectedClothing = item;
-            currentClothing.textContent = item.name;
-            
-            // Reset adjustments
-            sizeSlider.value = 100;
-            sizeValue.textContent = '100%';
-            clothingScale = 1.0;
-            
-            showNotification(`Đã chọn: ${item.name}. Trang phục sẽ tự động khớp với cơ thể bạn!`, false);
         }
         
         // Capture image
@@ -1556,17 +1652,25 @@
             
             // Add watermark and info
             tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            tempCtx.fillRect(10, tempCanvas.height - 100, tempCanvas.width - 20, 90);
+            tempCtx.fillRect(10, tempCanvas.height - 120, tempCanvas.width - 20, 110);
             
             tempCtx.fillStyle = '#ff9a9e';
             tempCtx.font = 'bold 18px Arial';
             tempCtx.textAlign = 'center';
-            tempCtx.fillText('Hệ thống thử đồ AR thông minh', tempCanvas.width / 2, tempCanvas.height - 70);
+            tempCtx.fillText('Hệ thống thử đồ AR thông minh', tempCanvas.width / 2, tempCanvas.height - 90);
             
             tempCtx.fillStyle = '#ffffff';
             tempCtx.font = '14px Arial';
-            if (selectedClothing) {
-                tempCtx.fillText(`Trang phục: ${selectedClothing.name}`, tempCanvas.width / 2, tempCanvas.height - 45);
+            if (selectedClothings.length > 0) {
+                tempCtx.fillText(`Đang thử: ${selectedClothings.length} trang phục`, tempCanvas.width / 2, tempCanvas.height - 65);
+                
+                // Hiển thị tên các trang phục
+                const clothingNames = selectedClothings.map(c => c.name).join(', ');
+                if (clothingNames.length < 50) {
+                    tempCtx.fillText(clothingNames, tempCanvas.width / 2, tempCanvas.height - 45);
+                } else {
+                    tempCtx.fillText(`${selectedClothings.length} mục trang phục`, tempCanvas.width / 2, tempCanvas.height - 45);
+                }
             }
             tempCtx.fillText(new Date().toLocaleDateString('vi-VN') + ' - ' + new Date().toLocaleTimeString('vi-VN'), tempCanvas.width / 2, tempCanvas.height - 20);
             
@@ -1576,31 +1680,6 @@
             newWindow.document.write(`<img src="${dataUrl}" alt="Ảnh thử đồ AR" style="max-width:100%;">`);
             
             showNotification("Đã chụp ảnh thành công! Ảnh đang được mở trong tab mới.", false);
-        }
-        
-        // Reset app
-        function resetApp() {
-            // Reset selected clothing
-            selectedClothing = null;
-            document.querySelectorAll('.clothing-item').forEach(el => {
-                el.classList.remove('active');
-            });
-            
-            // Reset adjustments
-            sizeSlider.value = 100;
-            sizeValue.textContent = '100%';
-            clothingScale = 1.0;
-            
-            opacitySlider.value = 80;
-            opacityValue.textContent = '80%';
-            clothingOpacity = 0.8;
-            
-            autoFitToggle.checked = true;
-            isAutoFit = true;
-            
-            currentClothing.textContent = "Chưa chọn";
-            
-            showNotification("Đã đặt lại hệ thống. Bạn có thể chọn trang phục mới.", false);
         }
         
         // Save image
